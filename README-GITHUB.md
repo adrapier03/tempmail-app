@@ -3,7 +3,7 @@
 File ini buat mode reusable kalau project mau dipush ke GitHub dan dipakai lagi untuk domain lain.
 
 ## Goal
-Project ini jangan hardcode ke `adrnode.com` terus. Pakai `.env` dan template config supaya bisa dipakai ulang.
+Project ini jangan hardcode ke `example.com` terus. Pakai `.env` dan template config supaya bisa dipakai ulang.
 
 ## File tambahan
 - `.env.example`

@@ -1,8 +1,8 @@
-# Temp Mail App - adrnode.com
+# Temp Mail App
 
 Self-hosted disposable/temp mail app dengan:
-- Web UI di `https://tempmail.adrnode.com`
-- MX / inbound mail di `mail.adrnode.com`
+- Web UI di `https://webmx.example.com`
+- MX / inbound mail di `mx.example.com`
 - Backend Node.js + Express
 - Reverse proxy Nginx + Let's Encrypt SSL
 - Postfix receive-only
@@ -15,13 +15,13 @@ Dokumen ini merangkum setup final yang dipakai sampai berhasil.
 ## 1. Arsitektur
 
 ### Domain / subdomain
-- `tempmail.adrnode.com` → web UI temp mail
-- `mail.adrnode.com` → mail receiver / MX
-- `adrnode.com` → domain utama email disposable (`*@adrnode.com`)
+- `webmx.example.com` → web UI temp mail
+- `mx.example.com` → mail receiver / MX
+- `example.com` → domain utama email disposable (`*@example.com`)
 
 ### Flow email
-1. Orang kirim email ke `apaaja@adrnode.com`
-2. DNS MX mengarah ke `mail.adrnode.com`
+1. Orang kirim email ke `apaaja@example.com`
+2. DNS MX mengarah ke `mx.example.com`
 3. Postfix menerima email di server
 4. Postfix meneruskan raw email ke script ingest Node (`tempmailpipe`)
 5. `ingest.js` parse email dan simpan ke `storage/data.json`
@@ -77,19 +77,19 @@ Tools yang dipakai:
 #### Web UI
 - Type: `A`
 - Name: `tempmail`
-- IPv4: `134.122.1.137`
+- IPv4: `YOUR.SERVER.IP`
 - Proxy: **Proxied**
 
 #### Mail receiver
 - Type: `A`
 - Name: `mail`
-- IPv4: `134.122.1.137`
+- IPv4: `YOUR.SERVER.IP`
 - Proxy: **DNS only**
 
 #### MX
 - Type: `MX`
 - Name: `@`
-- Mail server: `mail.adrnode.com`
+- Mail server: `mx.example.com`
 - Priority: `10`
 
 #### SPF
@@ -98,17 +98,17 @@ Tools yang dipakai:
 - Content:
 
 ```txt
-v=spf1 mx ip4:134.122.1.137 ~all
+v=spf1 mx ip4:YOUR.SERVER.IP ~all
 ```
 
 ### Penting
 Kalau sebelumnya memakai **Cloudflare Email Routing**:
 - matikan Email Routing dulu
 - hapus MX `route1/2/3.mx.cloudflare.net`
-- baru ganti ke MX sendiri (`mail.adrnode.com`)
+- baru ganti ke MX sendiri (`mx.example.com`)
 
 ### Catatan Cloudflare
-- `mail.adrnode.com` **harus DNS only**
+- `mx.example.com` **harus DNS only**
 - jangan proxied untuk SMTP/MX
 
 ---
@@ -155,13 +155,13 @@ curl http://127.0.0.1:3001
 ## 6. Nginx reverse proxy
 
 File vhost final:
-- `/etc/nginx/sites-available/tempmail.adrnode.com`
+- `/etc/nginx/sites-available/webmx.example.com`
 
 Isi final yang aktif:
 
 ```nginx
 server {
-    server_name tempmail.adrnode.com;
+    server_name webmx.example.com;
 
     location / {
         proxy_pass http://127.0.0.1:3001;
@@ -175,26 +175,26 @@ server {
     }
 
     listen 443 ssl; # managed by Certbot
-    ssl_certificate /etc/letsencrypt/live/tempmail.adrnode.com/fullchain.pem; # managed by Certbot
-    ssl_certificate_key /etc/letsencrypt/live/tempmail.adrnode.com/privkey.pem; # managed by Certbot
+    ssl_certificate /etc/letsencrypt/live/webmx.example.com/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/webmx.example.com/privkey.pem; # managed by Certbot
     include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
     ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
 }
 
 server {
-    if ($host = tempmail.adrnode.com) {
+    if ($host = webmx.example.com) {
         return 301 https://$host$request_uri;
     } # managed by Certbot
 
     listen 80;
-    server_name tempmail.adrnode.com;
+    server_name webmx.example.com;
     return 404; # managed by Certbot
 }
 ```
 
 ### Aktifkan site
 ```bash
-ln -s /etc/nginx/sites-available/tempmail.adrnode.com /etc/nginx/sites-enabled/tempmail.adrnode.com
+ln -s /etc/nginx/sites-available/webmx.example.com /etc/nginx/sites-enabled/webmx.example.com
 /usr/sbin/nginx -t
 systemctl reload nginx
 ```
@@ -211,7 +211,7 @@ apt-get install -y python3-certbot-nginx
 
 ### Issue certificate
 ```bash
-certbot --nginx -d tempmail.adrnode.com
+certbot --nginx -d webmx.example.com
 ```
 
 Kalau sukses, Certbot otomatis:
@@ -226,7 +226,7 @@ Kalau sukses, Certbot otomatis:
 ### Install
 Saat prompt installer:
 - pilih **Internet Site**
-- system mail name: `mail.adrnode.com`
+- system mail name: `mx.example.com`
 
 ```bash
 apt-get update
@@ -235,25 +235,25 @@ apt-get install -y postfix
 
 ### Set hostname server
 ```bash
-hostnamectl set-hostname mail.adrnode.com
-printf "127.0.0.1 localhost\n127.0.1.1 mail.adrnode.com mail\n" > /etc/hosts
+hostnamectl set-hostname mx.example.com
+printf "127.0.0.1 localhost\n127.0.1.1 mx.example.com mail\n" > /etc/hosts
 hostname -f
 ```
 
 Output ideal:
 ```bash
-mail.adrnode.com
+mx.example.com
 ```
 
 ### Konfigurasi utama Postfix
 ```bash
-postconf -e "myhostname = mail.adrnode.com"
-postconf -e "mydomain = adrnode.com"
+postconf -e "myhostname = mx.example.com"
+postconf -e "mydomain = example.com"
 postconf -e "myorigin = \$mydomain"
 postconf -e "inet_interfaces = all"
 postconf -e "inet_protocols = ipv4"
 postconf -e "mydestination = localhost, localhost.localdomain"
-postconf -e "virtual_alias_domains = adrnode.com"
+postconf -e "virtual_alias_domains = example.com"
 postconf -e "virtual_alias_maps = regexp:/etc/postfix/virtual_alias_regexp"
 postconf -e "local_recipient_maps ="
 postconf -e "smtpd_recipient_restrictions = permit_mynetworks,reject_unauth_destination"
@@ -262,7 +262,7 @@ postfix reload
 ```
 
 ### Alias map final
-Semua email `*@adrnode.com` diarahkan ke recipient virtual internal:
+Semua email `*@example.com` diarahkan ke recipient virtual internal:
 
 ```bash
 cat >/etc/postfix/virtual_alias_regexp <<'EOF'
@@ -349,7 +349,7 @@ Setelah fix, logic final:
 Bukti sukses di log Postfix:
 
 ```txt
-status=sent (delivered via tempmailpipe service (Stored message for abc@adrnode.com))
+status=sent (delivered via tempmailpipe service (Stored message for abc@example.com))
 ```
 
 ---
@@ -385,11 +385,11 @@ Agar inbox list tidak global untuk semua orang, app memakai **anonymous session 
 ## 12. Random username generator
 
 Random awal terlalu machine-like:
-- contoh: `e21uk574to@adrnode.com`
+- contoh: `e21uk574to@example.com`
 
 Generator kemudian diubah menjadi human-like:
-- contoh: `langitbiru23@adrnode.com`
-- contoh: `kopihujan41@adrnode.com`
+- contoh: `langitbiru23@example.com`
+- contoh: `kopihujan41@example.com`
 
 Lalu diperbaiki lagi agar **selalu unik**:
 - generate candidate human-like
@@ -403,8 +403,8 @@ Lalu diperbaiki lagi agar **selalu unik**:
 
 ### Cek DNS
 ```bash
-dig +short mail.adrnode.com A
-dig +short adrnode.com MX
+dig +short mx.example.com A
+dig +short example.com MX
 ```
 
 ### Cek port SMTP
@@ -420,13 +420,13 @@ mailq
 
 ### Cek map Postfix
 ```bash
-postmap -q test@adrnode.com regexp:/etc/postfix/virtual_alias_regexp
+postmap -q test@example.com regexp:/etc/postfix/virtual_alias_regexp
 postmap -q pipe.adrnode hash:/etc/postfix/transport
 ```
 
 ### Test kirim email lokal
 ```bash
-printf "Subject: test masuk app\n\nhalo dari postfix ke app\n" | sendmail abc@adrnode.com
+printf "Subject: test masuk app\n\nhalo dari postfix ke app\n" | sendmail abc@example.com
 ```
 
 ### Cek log Postfix
@@ -466,7 +466,7 @@ Penyebab:
 
 Fix:
 - disable Email Routing dulu
-- lalu ganti MX ke `mail.adrnode.com`
+- lalu ganti MX ke `mx.example.com`
 
 ### 4. Pipe Postfix ditolak
 Error:
@@ -510,7 +510,7 @@ docker compose up -d --build
 
 ### Nginx
 ```bash
-ln -s /etc/nginx/sites-available/tempmail.adrnode.com /etc/nginx/sites-enabled/tempmail.adrnode.com
+ln -s /etc/nginx/sites-available/webmx.example.com /etc/nginx/sites-enabled/webmx.example.com
 /usr/sbin/nginx -t
 systemctl reload nginx
 ```
@@ -519,7 +519,7 @@ systemctl reload nginx
 ```bash
 apt-get update
 apt-get install -y python3-certbot-nginx
-certbot --nginx -d tempmail.adrnode.com
+certbot --nginx -d webmx.example.com
 ```
 
 ### Postfix map
@@ -530,7 +530,7 @@ postfix reload
 
 ### Test email lokal
 ```bash
-printf "Subject: test masuk app final\n\nhalo dari postfix ke app final\n" | sendmail abc@adrnode.com
+printf "Subject: test masuk app final\n\nhalo dari postfix ke app final\n" | sendmail abc@example.com
 sleep 2
 cat /opt/tempmail-app/storage/data.json
 ```
@@ -571,8 +571,8 @@ cat /opt/tempmail-app/storage/data.json
 - `/opt/tempmail-app/docker-compose.yml`
 
 ### Nginx
-- `/etc/nginx/sites-available/tempmail.adrnode.com`
-- `/etc/nginx/sites-enabled/tempmail.adrnode.com`
+- `/etc/nginx/sites-available/webmx.example.com`
+- `/etc/nginx/sites-enabled/webmx.example.com`
 
 ### Postfix
 - `/etc/postfix/main.cf`
@@ -630,7 +630,7 @@ Belum cocok untuk publik besar tanpa tambahan:
 
 ### Web
 Buka:
-- `https://tempmail.adrnode.com`
+- `https://webmx.example.com`
 
 ### Test create
 - buat inbox custom, misal `hitamnyaaku`
@@ -642,11 +642,11 @@ Buka:
 
 ### Test email lokal
 ```bash
-printf "Subject: test final\n\nhalo final\n" | sendmail testfinal@adrnode.com
+printf "Subject: test final\n\nhalo final\n" | sendmail testfinal@example.com
 ```
 
 ### Test email luar
-- kirim dari Gmail / provider lain ke alamat `*@adrnode.com`
+- kirim dari Gmail / provider lain ke alamat `*@example.com`
 - buka inbox address itu dari web
 
 Jika email masuk dan muncul di inbox, setup berhasil.
