@@ -1,0 +1,13 @@
+{
+  "name": "tempmail-server",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "cors": "^2.8.5",
+    "mailparser": "^3.7.2"
+  }
+}

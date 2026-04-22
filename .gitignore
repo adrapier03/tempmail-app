@@ -1,0 +1,9 @@
+node_modules/
+server/node_modules/
+.env
+.env.local
+storage/data.json
+storage/*.log
+npm-debug.log
+.DS_Store
+*.pid

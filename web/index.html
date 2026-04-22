@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Temp Mail</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header>
+        <h1 id="appTitle">Temp Mail</h1>
+        <p id="appSubtitle">Disposable inbox</p>
+      </header>
+
+      <section class="toolbar">
+        <select id="inboxSelect"></select>
+        <button id="copyBtn">Copy</button>
+        <button id="refreshBtn">Refresh</button>
+        <button id="newBtn">New</button>
+        <button id="deleteBtn" class="danger">Delete</button>
+      </section>
+
+      <section class="new-box hidden" id="newBox">
+        <input id="localPartInput" placeholder="username atau kosongkan untuk random" />
+        <button id="createCustomBtn">Create</button>
+        <button id="createRandomBtn">Random</button>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2 id="currentInbox">No inbox selected</h2>
+          <span id="messageCount">0 messages</span>
+        </div>
+        <div id="messageList" class="message-list"></div>
+      </section>
+    </div>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
